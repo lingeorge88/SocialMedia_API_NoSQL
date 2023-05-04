@@ -77,8 +77,51 @@ const userController = {
         })
         .catch(err => res.status(400).json(err));
     },
-
-
+ // POST /api/users/:userId/friends/:friendId
+    async addFriend(req, res){
+        try{
+            const user = await User.findOneAndUpdate({ _id: req.params.id},
+                {$addToSet: { friends: req.params.friendId } },
+                { new: true, runValidators: true });
+                if(!user){
+                    res.status(404).json({ message: 'No user found with this id'});
+                    return;
+                }
+                res.json(user);
+            const friend = await User.findOneAndUpdate({ _id: req.params.friendId},
+                { $addToSet: { friends: req.params.userId } },
+                { new: true, runValidators: true });
+                if(!friend){
+                    res.status(404).json({ message: 'No user found with this friendId' })
+                    return; 
+                }
+        } catch(err){
+            res.status(500).json(err);
+        }
+    },
+     // DELETE /api/users/:userId/friends/:friendId
+    async deleteFriend(req,res){
+        try{
+            const user = await User.findOneAndUpdate({ _id: req.params.userId},
+                {$pull: { friends: req.params.friendId } },
+                { new: true, runValidators: true });
+                if(!user){
+                    res.status(404).json({ message: 'No user found with this id'});
+                    return;
+                }
+                console.log('friend added!');
+                res.json(user);
+            const friend = await User.findOneAndUpdate({ _id: req.params.friendId},
+                { $pull: { friends: req.params.userId } },
+                { new: true, runValidators: true });
+                if(!friend){
+                    res.status(404).json({ message: 'No user found with this friendId' })
+                    return; 
+                }
+        } catch(err){
+            res.status(500).json(err);
+        }
+    }
 }
 
 
