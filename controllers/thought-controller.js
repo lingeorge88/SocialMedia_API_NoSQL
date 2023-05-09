@@ -26,14 +26,24 @@ const thoughtController = {
         }
     },
 
-    async createThought (req,res) {
-        try{
-            const newThought = await Thought.create(req.body);
-            res.json(newThought);
-        } catch (err) {
-            console.log(err);
-            return res.status(500).json(err)
-        }
+    createThought({ body }, res) {
+        Thought.create(body)
+        .then(dbThoughtData => {
+            User.findOneAndUpdate(
+                { _id: body.userId },
+                { $push: { thoughts: dbThoughtData._id } },
+                { new: true }
+            )
+            .then(dbUserData => {
+                if (!dbUserData) {
+                    res.status(404).json({ message: 'No user found with this id' });
+                    return;
+                }
+                res.json(dbUserData);
+            })
+            .catch(err => res.json(err));
+        })
+        .catch(err => res.status(400).json(err));
     },
 
     async updateThought (req, res) {
@@ -72,6 +82,40 @@ const thoughtController = {
         .catch(err => res.status(500).json(err));
     },
 
+    async addReaction(req, res){
+        try {
+            const newReaction = await Thought.findOneAndUpdate(
+                { _id: req.params.thoughtId },
+                { $addToSet:{ reactions: req.body}},
+                {new: true, runValidators: true});
+                if(!newReaction){
+                    res.status(404).json({ message: 'Unable to add a reaction because this thought ID does not exist'});
+                    return;
+                }
+                console.log('Reaction added!');
+                res.json(newReaction);
+        } catch (err) {
+            res.status(500).json(err);
+        }
+    },
+
+    async deleteReaction (req, res) {
+        try{
+        const reaction = await Thought.findOneAndUpdate(
+            { _id: req.params.thoughtId },
+            { $pull: { reactions: { reactionId: req.body.reactionId } } },
+            { new: true, runValidators: true });
+            if(!reaction){
+                res.status(404).json({ message: 'No thought found with this id' });
+                return;
+            }
+            res.json({message: 'Successfully deleted the reaction'});
+        
+        } catch(err){
+            res.status(500).json(err);
+        }
+    },
 }
+
 
 module.exports = thoughtController;
